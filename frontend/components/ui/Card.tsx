@@ -9,7 +9,7 @@ export default function Card({ children, className }: CardProps) {
   return (
     <section
       className={clsx(
-        "space-y-3 rounded-2xl border border-slate-200 bg-panel p-5 shadow-soft",
+        "relative space-y-4 rounded-2xl border border-slate-200/80 bg-white/80 p-5 shadow-soft backdrop-blur dark:border-slate-800 dark:bg-slate-900/75 dark:shadow-night",
         className
       )}
     >

@@ -1,9 +1,9 @@
 "use client";
 
+import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
-import Button from "@/components/ui/Button";
 import type { TranslateInput } from "@/features/translate/types";
 
 type Props = {
@@ -28,9 +28,9 @@ export default function JobInputPanel({ input, onChange }: Props) {
 
   return (
     <Card>
-      <h2 className="text-xl font-semibold text-slate-900">Job Input Panel</h2>
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Job Target</h2>
 
-      <label className="text-sm font-semibold text-slate-700" htmlFor="jobTitle">
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="jobTitle">
         Desired Job Title
       </label>
       <Input
@@ -40,10 +40,7 @@ export default function JobInputPanel({ input, onChange }: Props) {
         placeholder="e.g. FinTech Analyst"
       />
 
-      <label
-        className="text-sm font-semibold text-slate-700"
-        htmlFor="jobDescription"
-      >
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="jobDescription">
         Desired Job Description
       </label>
       <Textarea
@@ -54,7 +51,7 @@ export default function JobInputPanel({ input, onChange }: Props) {
         placeholder="Paste target job description"
       />
 
-      <label className="text-sm font-semibold text-slate-700" htmlFor="handshakeUrl">
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="handshakeUrl">
         Handshake URL
       </label>
       <Input
@@ -64,10 +61,7 @@ export default function JobInputPanel({ input, onChange }: Props) {
         placeholder="https://app.joinhandshake.com/..."
       />
 
-      <label
-        className="text-sm font-semibold text-slate-700"
-        htmlFor="handshakeTitle"
-      >
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="handshakeTitle">
         Handshake Title
       </label>
       <Input
@@ -76,10 +70,7 @@ export default function JobInputPanel({ input, onChange }: Props) {
         onChange={(event) => update("handshakeTitle", event.target.value)}
       />
 
-      <label
-        className="text-sm font-semibold text-slate-700"
-        htmlFor="handshakeDescription"
-      >
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="handshakeDescription">
         Handshake Description
       </label>
       <Textarea

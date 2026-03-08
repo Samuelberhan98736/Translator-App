@@ -19,3 +19,19 @@ export async function apiPost<TResponse>(
 
   return (await response.json()) as TResponse;
 }
+
+export async function apiGet<TResponse>(path: string): Promise<TResponse> {
+  const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as TResponse;
+}

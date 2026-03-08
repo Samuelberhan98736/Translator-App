@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: Translator App API
+  version: 0.1.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      responses:
+        "200":
+          description: OK
+  /readyz:
+    get:
+      summary: Readiness check
+      responses:
+        "200":
+          description: Ready
+  /api/auth/signup:
+    post:
+      summary: Sign up
+      responses:
+        "200":
+          description: Session token issued
+  /api/auth/signin:
+    post:
+      summary: Sign in
+      responses:
+        "200":
+          description: Session token issued
+  /api/translations:
+    post:
+      summary: Enqueue translation job
+      responses:
+        "202":
+          description: Accepted
+  /api/translations/{jobId}:
+    get:
+      summary: Fetch translation job
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job payload
+  /api/translator/transform:
+    post:
+      summary: Legacy synchronous translation
+      responses:
+        "200":
+          description: Translation output

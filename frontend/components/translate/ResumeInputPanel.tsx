@@ -25,20 +25,20 @@ export default function ResumeInputPanel({ input, onChange }: Props) {
 
   return (
     <Card>
-      <h2 className="text-xl font-semibold text-slate-900">Resume Input Panel</h2>
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Resume Content</h2>
 
-      <label className="text-sm font-semibold text-slate-700" htmlFor="resumeFile">
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="resumeFile">
         Upload Resume
       </label>
       <input
         id="resumeFile"
-        className="block w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-[#0b3c66]"
+        className="block w-full cursor-pointer rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm text-slate-700 transition file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-cyan-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:file:bg-cyan-500 dark:hover:file:bg-cyan-400"
         type="file"
         accept=".txt,.md,.pdf,.doc,.docx"
         onChange={(event) => void onFileUpload(event.target.files?.[0])}
       />
 
-      <label className="text-sm font-semibold text-slate-700" htmlFor="resumeText">
+      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="resumeText">
         Resume Text
       </label>
       <Textarea
