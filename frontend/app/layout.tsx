@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Manrope } from "next/font/google";
+import AuthSessionSync from "@/components/auth/AuthSessionSync";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import PageContainer from "@/components/layout/PageContainer";
@@ -33,6 +34,7 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
+        <AuthSessionSync />
 
         <div className="min-h-screen md:grid md:grid-cols-[270px_1fr]">
           <Sidebar />

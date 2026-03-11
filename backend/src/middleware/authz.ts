@@ -1,6 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
+import { supabaseAdmin } from "../db/client";
 
-export function authzMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function authzMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
@@ -8,17 +13,25 @@ export function authzMiddleware(req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  const token = authHeader.replace("Bearer ", "").trim();
-  const parts = token.split(".");
-
-  if (parts.length < 2) {
+  const accessToken = authHeader.replace("Bearer ", "").trim();
+  if (!accessToken) {
     res.status(401).json({ error: "Invalid token" });
     return;
   }
 
+  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
+  if (error || !data.user) {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+
+  const roleFromMetadata = data.user.user_metadata?.role;
+  const role =
+    roleFromMetadata === "admin" || roleFromMetadata === "mentor" ? roleFromMetadata : "learner";
+
   req.user = {
-    id: parts[0] || "anonymous",
-    role: (parts[1] as "learner" | "mentor" | "admin") || "learner"
+    id: data.user.id,
+    role
   };
 
   next();

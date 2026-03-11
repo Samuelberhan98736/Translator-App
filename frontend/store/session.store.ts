@@ -24,7 +24,8 @@ export function getSessionState() {
 export function setSessionUser(user: SessionUser | null) {
   sessionState.user = user;
   sessionState.isAuthenticated = Boolean(user);
-  sessionListeners.forEach((listener) => listener(sessionState));
+  const snapshot = { ...sessionState };
+  sessionListeners.forEach((listener) => listener(snapshot));
 }
 
 export function subscribeSession(listener: SessionListener) {

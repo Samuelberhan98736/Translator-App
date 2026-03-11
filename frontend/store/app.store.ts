@@ -16,7 +16,8 @@ export function getAppStoreState() {
 
 export function setSidebarOpen(sidebarOpen: boolean) {
   state.sidebarOpen = sidebarOpen;
-  listeners.forEach((listener) => listener(state));
+  const snapshot = { ...state };
+  listeners.forEach((listener) => listener(snapshot));
 }
 
 export function subscribeAppStore(listener: Listener) {

@@ -7,7 +7,9 @@ export async function translateService(input: TranslateInput): Promise<Translate
     jobTitle: input.jobTitle,
     jobDescription: input.jobDescription,
     resumeText: input.resumeText,
-    handshakeUrl: input.handshakeUrl || undefined
+    handshakeUrl: input.handshakeUrl || undefined,
+    handshakeTitle: input.handshakeTitle || undefined,
+    handshakeDescription: input.handshakeDescription || undefined
   };
 
   return apiPost<TranslateResult>(API_ROUTES.translate, payload);
