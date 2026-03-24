@@ -9,7 +9,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 export async function apiPost<TResponse>(
   path: string,
-  body: Record<string, unknown>
+  body: unknown
 ): Promise<TResponse> {
   const authHeaders = await getAuthHeaders();
   const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
@@ -37,6 +37,28 @@ export async function apiGet<TResponse>(path: string): Promise<TResponse> {
       "Content-Type": "application/json",
       ...authHeaders
     }
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as TResponse;
+}
+
+export async function apiPut<TResponse>(
+  path: string,
+  body: unknown
+): Promise<TResponse> {
+  const authHeaders = await getAuthHeaders();
+  const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders
+    },
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import JobInputPanel from "@/components/translate/JobInputPanel";
 import ResultsPanel from "@/components/translate/ResultsPanel";
 import ResumeInputPanel from "@/components/translate/ResumeInputPanel";
+import { fetchJobsByTitle } from "@/features/job/services/job.service";
+import type { JobListing } from "@/features/job/types";
+import { getProfile } from "@/features/profile/services/profile.service";
+import type { StudentProfile } from "@/features/profile/types";
 import { useTranslate } from "@/features/translate/hooks/useTranslate";
 import type { TranslateInput } from "@/features/translate/types";
 
@@ -13,15 +17,77 @@ const initialInput: TranslateInput = {
   jobTitle: "",
   jobDescription: "",
   resumeText: "",
+  company: "",
+  source: "manual",
+  opportunityType: "internship",
+  schedulePreference: "full-time",
   handshakeUrl: ""
 };
 
 export default function TranslateClientPage() {
   const [input, setInput] = useState<TranslateInput>(initialInput);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [profileStatus, setProfileStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [jobs, setJobs] = useState<JobListing[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
   const { state, runTranslation } = useTranslate();
 
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const savedProfile = await getProfile();
+        setProfile(savedProfile);
+        setInput((current) => ({
+          ...current,
+          profile: savedProfile,
+          jobTitle: current.jobTitle || savedProfile.role,
+          opportunityType: current.opportunityType || savedProfile.opportunityType,
+          schedulePreference: current.schedulePreference || savedProfile.schedulePreference
+        }));
+        setProfileStatus("ready");
+      } catch {
+        setProfileStatus("error");
+      }
+    }
+
+    void loadProfile();
+  }, []);
+
   async function onSubmit() {
-    await runTranslation(input);
+    await runTranslation({
+      ...input,
+      profile: profile ?? undefined
+    });
+  }
+
+  async function onSearchJobs() {
+    setJobsLoading(true);
+
+    try {
+      const nextJobs = await fetchJobsByTitle({
+        query: input.jobTitle || profile?.role || "",
+        major: profile?.major,
+        opportunityType: input.opportunityType ?? profile?.opportunityType,
+        schedulePreference: input.schedulePreference ?? profile?.schedulePreference
+      });
+
+      setJobs(nextJobs);
+    } finally {
+      setJobsLoading(false);
+    }
+  }
+
+  function onSelectJob(job: JobListing) {
+    setInput((current) => ({
+      ...current,
+      jobTitle: job.title,
+      company: job.company,
+      jobDescription: job.description,
+      source: job.source,
+      opportunityType: job.opportunityType,
+      schedulePreference: job.schedulePreference,
+      handshakeUrl: job.url
+    }));
   }
 
   return (
@@ -43,16 +109,42 @@ export default function TranslateClientPage() {
               Translator Workspace
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Align your resume to any role and surface concrete skill gaps.
+              Align your resume to student-focused job targets and surface concrete capability gaps.
             </p>
           </div>
         </div>
       </section>
 
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {profile?.role || "Add your profile preferences"}
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {profileStatus === "ready"
+              ? `${profile?.major || "No major yet"} | ${profile?.opportunityType || "internship"} | ${profile?.schedulePreference || "full-time"}`
+              : profileStatus === "error"
+                ? "Unable to load saved profile."
+                : "Loading saved student profile..."}
+          </p>
+        </div>
+        <div className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
+          {profile?.handshakeConnected ? "Handshake Ready" : "Handshake Stub Mode"}
+        </div>
+      </Card>
+
       {/* Input panels */}
       <div className="grid gap-5 xl:grid-cols-2">
         <ResumeInputPanel input={input} onChange={setInput} />
-        <JobInputPanel input={input} onChange={setInput} />
+        <JobInputPanel
+          input={input}
+          jobs={jobs}
+          jobsLoading={jobsLoading}
+          profile={profile}
+          onChange={setInput}
+          onSearchJobs={onSearchJobs}
+          onSelectJob={onSelectJob}
+        />
       </div>
 
       {/* Submit bar */}
@@ -63,7 +155,7 @@ export default function TranslateClientPage() {
             <line x1="12" x2="12" y1="8" y2="12" />
             <line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
-          Fill in both panels, then run the translation.
+          Upload the resume, select a role, and run the translation.
         </div>
         <Button onClick={onSubmit} disabled={state.status === "loading"} className="shrink-0">
           {state.status === "loading" ? (

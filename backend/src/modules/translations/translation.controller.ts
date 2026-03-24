@@ -3,6 +3,7 @@ import {
   cancelTranslationJob,
   createTranslationJob,
   getTranslationJob,
+  getUserTranslations,
   translateNow
 } from "./translation.service";
 import { TranslateRequestSchema } from "./translation.types";
@@ -49,6 +50,15 @@ export function cancelTranslation(req: Request, res: Response): void {
   }
 
   res.json({ jobId: job.id, status: job.status });
+}
+
+export function listTranslations(req: Request, res: Response): void {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  res.json(getUserTranslations(userId));
 }
 
 export function transformLegacy(req: Request, res: Response): void {

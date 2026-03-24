@@ -1,6 +1,9 @@
 export interface SessionUser {
   id: string;
   email: string;
+  name?: string;
+  avatarUrl?: string;
+  provider?: string;
 }
 
 export interface SessionState {

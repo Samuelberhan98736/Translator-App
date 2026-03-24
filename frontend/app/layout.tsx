@@ -3,7 +3,6 @@ import Script from "next/script";
 import { Manrope } from "next/font/google";
 import AuthSessionSync from "@/components/auth/AuthSessionSync";
 import Navbar from "@/components/layout/Navbar";
-import Sidebar from "@/components/layout/Sidebar";
 import PageContainer from "@/components/layout/PageContainer";
 import "../styles/globals.css";
 
@@ -36,12 +35,9 @@ export default function RootLayout({
         </Script>
         <AuthSessionSync />
 
-        <div className="min-h-screen md:grid md:grid-cols-[270px_1fr]">
-          <Sidebar />
-          <div className="grid min-h-screen grid-rows-[auto_1fr]">
-            <Navbar />
-            <PageContainer>{children}</PageContainer>
-          </div>
+        <div className="min-h-screen">
+          <Navbar />
+          <PageContainer>{children}</PageContainer>
         </div>
       </body>
     </html>

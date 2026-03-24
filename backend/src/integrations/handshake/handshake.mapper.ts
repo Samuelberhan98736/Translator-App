@@ -17,6 +17,7 @@ export function mapHandshakeListingToTranslationInput(
     jobTitle: listing.title,
     jobDescription: listing.description,
     handshakeUrl: listing.url,
+    source: "handshake",
     resumeText
   };
 }

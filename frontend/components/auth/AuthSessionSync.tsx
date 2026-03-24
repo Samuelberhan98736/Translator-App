@@ -21,7 +21,10 @@ export default function AuthSessionSync() {
 
       setSessionUser({
         id: user.id,
-        email: user.email ?? ""
+        email: user.email ?? "",
+        name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? undefined,
+        avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+        provider: user.app_metadata?.provider ?? undefined
       });
     });
 
@@ -36,7 +39,10 @@ export default function AuthSessionSync() {
 
       setSessionUser({
         id: user.id,
-        email: user.email ?? ""
+        email: user.email ?? "",
+        name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? undefined,
+        avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+        provider: user.app_metadata?.provider ?? undefined
       });
     });
 

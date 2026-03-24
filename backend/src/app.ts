@@ -8,6 +8,7 @@ import { requestIdMiddleware } from "./middleware/request-id";
 import { auditRouter } from "./modules/audit/audit.routes";
 import { authRouter } from "./modules/auth/auth.routes";
 import { jobTargetRouter } from "./modules/job-targets/job-target.routes";
+import { profileRouter } from "./modules/profiles/profile.routes";
 import { resumeRouter } from "./modules/resumes/resume.routes";
 import { transformLegacy } from "./modules/translations/translation.controller";
 import { translationRouter } from "./modules/translations/translation.routes";
@@ -33,6 +34,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/translations", authzMiddleware, translationRouter);
 app.use("/api/resumes", authzMiddleware, resumeRouter);
 app.use("/api/job-targets", authzMiddleware, jobTargetRouter);
+app.use("/api/profile", authzMiddleware, profileRouter);
 app.use("/api/audit", authzMiddleware, requireRole("admin"), auditRouter);
 app.post("/api/translator/transform", transformLegacy);
 
