@@ -1,184 +1,191 @@
+import { supabaseAdmin } from "../../db/client";
+import { translateWithAI } from "../../integrations/openai/openai.service";
 import { enqueue } from "../../queue/queue";
 import type {
-  CapabilityGap,
   CreateTranslationRequest,
   TranslationJob,
   TranslationResult
 } from "./translation.types";
 
-const translationJobs = new Map<string, TranslationJob>();
+// Holds resume text in memory between job creation and processing.
+// The resume text is not stored in the DB — it lives only for the duration
+// of the job lifecycle on this server instance.
+const pendingResumes = new Map<string, string>();
 
-const STOP_WORDS = new Set([
-  "about", "above", "after", "again", "against", "also", "always", "between",
-  "their", "there", "these", "those", "through", "under", "until", "using",
-  "where", "which", "while", "within", "would", "years", "could", "should",
-  "other", "often", "every", "will", "with", "that", "this", "have", "from",
-  "they", "been", "more", "your", "some", "when", "than", "then", "into",
-  "able", "across", "based", "being", "both", "each", "each", "even", "given",
-  "including", "multiple", "needs", "process", "strong", "tasks", "toward",
-  "various", "well", "work", "working"
-]);
+// ─── DB → domain mapper ───────────────────────────────────────────────────────
 
-// Skill-focused terms to prioritize in keyword extraction
-const TECH_PATTERN = /^(typescript|javascript|python|react|node|sql|java|c\+\+|golang|rust|swift|kotlin|docker|kubernetes|aws|gcp|azure|mongodb|postgres|redis|graphql|rest|api|git|agile|scrum|machine|learning|data|analytics|testing|devops|linux|security|cloud|microservices|ci\/cd|html|css|next|express|django|spring)$/i;
-
-function sanitizeText(text: string): string {
-  // Strip HTML tags and control characters, normalize whitespace
-  return text
-    .replace(/<[^>]*>/g, " ")
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 50_000);
-}
-
-function extractKeywords(text: string): string[] {
-  const tokens = sanitizeText(text)
-    .toLowerCase()
-    .replace(/[^a-z0-9+#\s]/g, " ")
-    .split(/\s+/)
-    .filter((token) => token.length > 3 && !STOP_WORDS.has(token));
-
-  // Prioritize tech/skill terms
-  const techTerms = tokens.filter((t) => TECH_PATTERN.test(t));
-  const otherTerms = tokens.filter((t) => !TECH_PATTERN.test(t));
-
-  return Array.from(new Set([...techTerms, ...otherTerms])).slice(0, 15);
-}
-
-function computeSkillGaps(jobDescription: string, resumeText: string): string[] {
-  const jdTokens = extractKeywords(jobDescription);
-  const resumeTokens = new Set(extractKeywords(resumeText));
-  return jdTokens.filter((token) => !resumeTokens.has(token)).slice(0, 8);
-}
-
-function buildProfileSummary(input: CreateTranslationRequest): string {
-  if (!input.profile) {
-    return "No structured student profile supplied.";
-  }
-
-  const parts = [
-    input.profile.major ? `Major: ${input.profile.major}` : null,
-    input.profile.role ? `Target Role: ${input.profile.role}` : null,
-    `Track: ${input.profile.opportunityType}`,
-    `Availability: ${input.profile.schedulePreference}`,
-    input.profile.handshakeConnected ? "Handshake profile linked" : "Handshake profile not linked"
-  ].filter(Boolean);
-
-  return parts.join(" | ");
-}
-
-function buildCapabilityGaps(input: CreateTranslationRequest): CapabilityGap[] {
-  const missingCapabilities = computeSkillGaps(sanitizeText(input.jobDescription), sanitizeText(input.resumeText));
-
-  return missingCapabilities.slice(0, 5).map((capability, index) => ({
-    capability,
-    severity: index < 2 ? "high" : "medium",
-    evidence: `The target description emphasizes "${capability}", but the submitted resume does not surface that language clearly.`,
-    recommendation: `Add a bullet or project outcome that demonstrates ${capability} using measurable impact and the job-description phrasing.`
-  }));
-}
-
-export function translateNow(input: CreateTranslationRequest): TranslationResult {
-  const cleanJob = sanitizeText(input.jobDescription);
-  const cleanResume = sanitizeText(input.resumeText);
-
-  const matchedKeywords = extractKeywords(cleanJob).filter((token) =>
-    cleanResume.toLowerCase().includes(token)
-  );
-  const skillGaps = computeSkillGaps(cleanJob, cleanResume);
-
-  const profileSummary = buildProfileSummary(input);
-  const opportunityLabel = input.opportunityType ?? input.profile?.opportunityType ?? "job";
-  const scheduleLabel = input.schedulePreference ?? input.profile?.schedulePreference ?? "full-time";
-  const targetRole = input.profile?.role || input.jobTitle;
-  const targetCompany = input.company ? ` at ${input.company}` : "";
-  const keywordHighlights = matchedKeywords.length
-    ? matchedKeywords.map((keyword) => `- Demonstrates ${keyword} through project, coursework, or work outcomes.`).join("\n")
-    : "- Add measurable examples that mirror the strongest verbs and tools in the target description.";
-
-  const transformedResume = [
-    `Target Role: ${targetRole}${targetCompany}`,
-    `Target Format: ${opportunityLabel} | ${scheduleLabel}`,
-    `Profile Context: ${profileSummary}`,
-    "",
-    "Reframed Resume Summary:",
-    `Candidate is positioning for ${input.jobTitle}${targetCompany} by aligning prior experience with the language, tools, and delivery expectations stated in the target description.`,
-    "",
-    "Aligned Experience Themes:",
-    keywordHighlights,
-    "",
-    "Working Resume Draft:",
-    `${cleanResume}\n\nRewritten to emphasize business impact, role alignment, and standard job-description language.`
-  ].join("\n");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToJob(row: any, output?: any): TranslationJob {
+  const result: TranslationResult | null = output
+    ? {
+        transformedResume: output.transformed_resume,
+        capabilityGaps: output.capability_gaps ?? [],
+        skillGaps: output.skill_gaps ?? [],
+        matchedKeywords: output.matched_keywords ?? [],
+        profileSummary: output.profile_summary ?? ""
+      }
+    : null;
 
   return {
-    transformedResume,
-    matchedKeywords,
-    capabilityGaps: buildCapabilityGaps(input),
-    skillGaps,
-    profileSummary
-  };
-}
-
-export function createTranslationJob(input: CreateTranslationRequest, userId: string): TranslationJob {
-  const now = new Date().toISOString();
-  const job: TranslationJob = {
-    id: crypto.randomUUID(),
-    userId,
-    status: "queued",
-    input,
-    result: null,
+    id: row.id,
+    userId: row.user_id,
+    status: row.status,
+    input: {
+      jobTitle: row.job_title,
+      jobDescription: row.job_description,
+      resumeText: "",          // not persisted — populated transiently during processing
+      company: row.company ?? undefined,
+      source: row.source,
+      opportunityType: row.opportunity_type ?? undefined,
+      schedulePreference: row.schedule_preference ?? undefined,
+      handshakeUrl: row.handshake_url ?? undefined,
+      profile: row.profile_snapshot ?? undefined
+    },
+    result,
     error: null,
-    createdAt: now,
-    updatedAt: now
+    createdAt: row.created_at,
+    updatedAt: row.finished_at ?? row.started_at ?? row.created_at
   };
-
-  translationJobs.set(job.id, job);
-  enqueue("translation", { jobId: job.id });
-  return job;
 }
 
-export function getTranslationJob(jobId: string): TranslationJob | null {
-  return translationJobs.get(jobId) ?? null;
-}
+// ─── Public service functions ─────────────────────────────────────────────────
 
-export function getUserTranslations(userId: string): TranslationJob[] {
-  return Array.from(translationJobs.values())
-    .filter((job) => job.userId === userId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
+export async function createTranslationJob(
+  input: CreateTranslationRequest,
+  userId: string
+): Promise<TranslationJob> {
+  const { data, error } = await supabaseAdmin
+    .from("translation_jobs")
+    .insert({
+      user_id: userId,
+      status: "queued",
+      job_title: input.jobTitle,
+      job_description: input.jobDescription,
+      company: input.company ?? null,
+      source: input.source ?? "manual",
+      opportunity_type: input.opportunityType ?? null,
+      schedule_preference: input.schedulePreference ?? null,
+      handshake_url: input.handshakeUrl ?? null,
+      profile_snapshot: input.profile ?? {}
+    })
+    .select("*")
+    .single();
 
-export function cancelTranslationJob(jobId: string, userId: string): TranslationJob | null {
-  const job = translationJobs.get(jobId);
-  if (!job || job.userId !== userId || job.status === "completed") {
-    return null;
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create translation job");
   }
 
-  job.status = "canceled";
-  job.updatedAt = new Date().toISOString();
-  translationJobs.set(job.id, job);
-  return job;
+  // Stash the resume text for the worker to pick up
+  pendingResumes.set(data.id, input.resumeText);
+  enqueue("translation", { jobId: data.id });
+
+  return rowToJob(data);
+}
+
+export async function getTranslationJob(jobId: string): Promise<TranslationJob | null> {
+  const { data: jobRow, error } = await supabaseAdmin
+    .from("translation_jobs")
+    .select("*")
+    .eq("id", jobId)
+    .single();
+
+  if (error || !jobRow) return null;
+
+  const { data: outputRow } = await supabaseAdmin
+    .from("translation_outputs")
+    .select("*")
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  return rowToJob(jobRow, outputRow);
+}
+
+export async function getUserTranslations(userId: string): Promise<TranslationJob[]> {
+  const { data: jobs, error } = await supabaseAdmin
+    .from("translation_jobs")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !jobs) return [];
+
+  const jobIds = jobs.map((j) => j.id);
+  const { data: outputs } = await supabaseAdmin
+    .from("translation_outputs")
+    .select("*")
+    .in("job_id", jobIds);
+
+  const outputMap = new Map((outputs ?? []).map((o) => [o.job_id, o]));
+
+  return jobs.map((j) => rowToJob(j, outputMap.get(j.id)));
+}
+
+export async function cancelTranslationJob(
+  jobId: string,
+  userId: string
+): Promise<TranslationJob | null> {
+  const { data, error } = await supabaseAdmin
+    .from("translation_jobs")
+    .update({ status: "canceled" })
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .in("status", ["queued", "running"])
+    .select("*")
+    .single();
+
+  if (error || !data) return null;
+
+  pendingResumes.delete(jobId);
+  return rowToJob(data);
 }
 
 export async function processTranslationJob(jobId: string): Promise<void> {
-  const job = translationJobs.get(jobId);
+  // Atomically claim the job — only processes if still queued
+  const { data: jobRow, error } = await supabaseAdmin
+    .from("translation_jobs")
+    .update({ status: "running", started_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .eq("status", "queued")
+    .select("*")
+    .single();
 
-  if (!job || job.status !== "queued") {
-    return;
-  }
+  if (error || !jobRow) return;
 
-  job.status = "running";
-  job.updatedAt = new Date().toISOString();
+  const resumeText = pendingResumes.get(jobId) ?? "";
+  pendingResumes.delete(jobId);
+
+  const input: CreateTranslationRequest = {
+    jobTitle: jobRow.job_title,
+    jobDescription: jobRow.job_description,
+    resumeText,
+    company: jobRow.company ?? undefined,
+    source: jobRow.source,
+    opportunityType: jobRow.opportunity_type ?? undefined,
+    schedulePreference: jobRow.schedule_preference ?? undefined,
+    handshakeUrl: jobRow.handshake_url ?? undefined,
+    profile: jobRow.profile_snapshot ?? undefined
+  };
 
   try {
-    const result = translateNow(job.input);
-    job.result = result;
-    job.status = "completed";
-    job.updatedAt = new Date().toISOString();
-  } catch (error) {
-    job.status = "failed";
-    job.error = error instanceof Error ? error.message : "Translation processing failed";
-    job.updatedAt = new Date().toISOString();
+    const result = await translateWithAI(input);
+
+    await supabaseAdmin.from("translation_outputs").insert({
+      job_id: jobId,
+      transformed_resume: result.transformedResume,
+      capability_gaps: result.capabilityGaps,
+      skill_gaps: result.skillGaps,
+      matched_keywords: result.matchedKeywords,
+      profile_summary: result.profileSummary
+    });
+
+    await supabaseAdmin
+      .from("translation_jobs")
+      .update({ status: "completed", finished_at: new Date().toISOString() })
+      .eq("id", jobId);
+  } catch {
+    await supabaseAdmin
+      .from("translation_jobs")
+      .update({ status: "failed", finished_at: new Date().toISOString() })
+      .eq("id", jobId);
   }
 }

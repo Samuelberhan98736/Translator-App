@@ -1,5 +1,5 @@
 export const API_ROUTES = {
-  translate: "/api/translator/transform",
   translations: "/api/translations",
+  translationJob: (jobId: string) => `/api/translations/${jobId}`,
   translationHistory: "/api/translations/history"
 } as const;

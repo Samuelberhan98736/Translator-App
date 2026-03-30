@@ -39,8 +39,7 @@ export default function ProfilePage() {
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeSession((state) => setSessionUser(state.user));
-    return unsubscribe;
+    return subscribeSession((state) => setSessionUser(state.user));
   }, []);
 
   useEffect(() => {

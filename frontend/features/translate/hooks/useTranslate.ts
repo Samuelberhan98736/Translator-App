@@ -6,6 +6,7 @@ import type { TranslateInput, TranslateState } from "@/features/translate/types"
 
 const initialState: TranslateState = {
   status: "idle",
+  jobId: null,
   result: null,
   error: null
 };
@@ -17,19 +18,24 @@ export function useTranslate() {
     if (!input.resumeText.trim() || !input.jobTitle.trim() || !input.jobDescription.trim()) {
       setState({
         status: "error",
+        jobId: null,
         result: null,
         error: "Resume text, job title, and job description are required."
       });
       return;
     }
 
+    setState({ status: "queued", jobId: null, result: null, error: null });
+
     try {
-      setState({ status: "loading", result: null, error: null });
-      const result = await translateService(input);
-      setState({ status: "success", result, error: null });
+      const result = await translateService(input, (liveStatus) => {
+        setState((prev) => ({ ...prev, status: liveStatus }));
+      });
+
+      setState({ status: "success", jobId: null, result, error: null });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Translation failed.";
-      setState({ status: "error", result: null, error: message });
+      setState({ status: "error", jobId: null, result: null, error: message });
     }
   }
 

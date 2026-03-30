@@ -31,7 +31,7 @@ export function setSessionUser(user: SessionUser | null) {
   sessionListeners.forEach((listener) => listener(snapshot));
 }
 
-export function subscribeSession(listener: SessionListener) {
+export function subscribeSession(listener: SessionListener): () => void {
   sessionListeners.add(listener);
-  return () => sessionListeners.delete(listener);
+  return () => { sessionListeners.delete(listener); };
 }

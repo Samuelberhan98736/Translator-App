@@ -42,7 +42,7 @@ export default function ResultsPanel({ state }: Props) {
         )}
       </div>
 
-      {state.status === "loading" ? <LoadingSpinner /> : null}
+      {(state.status === "queued" || state.status === "running") ? <LoadingSpinner /> : null}
 
       {state.status === "error" ? (
         <div className="flex items-start gap-3 rounded-xl border border-rose-300/60 bg-rose-100/70 px-4 py-3 dark:border-rose-500/40 dark:bg-rose-900/20">

@@ -155,15 +155,22 @@ export default function TranslateClientPage() {
             <line x1="12" x2="12" y1="8" y2="12" />
             <line x1="12" x2="12.01" y1="16" y2="16" />
           </svg>
-          Upload the resume, select a role, and run the translation.
+          {state.status === "queued" && "Job queued — waiting for worker..."}
+          {state.status === "running" && "Running translation with AI..."}
+          {(state.status === "idle" || state.status === "success" || state.status === "error") &&
+            "Paste your resume, select a role, and run the translation."}
         </div>
-        <Button onClick={onSubmit} disabled={state.status === "loading"} className="shrink-0">
-          {state.status === "loading" ? (
+        <Button
+          onClick={onSubmit}
+          disabled={state.status === "queued" || state.status === "running"}
+          className="shrink-0"
+        >
+          {(state.status === "queued" || state.status === "running") ? (
             <span className="flex items-center gap-2">
               <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              Translating...
+              {state.status === "queued" ? "Queued..." : "Running..."}
             </span>
           ) : (
             <span className="flex items-center gap-2">

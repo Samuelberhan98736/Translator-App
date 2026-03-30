@@ -1,6 +1,7 @@
 import type { StudentProfile } from "@/features/profile/types";
 
-export type TranslateStatus = "idle" | "loading" | "success" | "error";
+/** idle → queued → running → success | error */
+export type TranslateStatus = "idle" | "queued" | "running" | "success" | "error";
 
 export interface TranslateInput {
   jobTitle: string;
@@ -33,6 +34,7 @@ export interface TranslateResult {
 
 export interface TranslateState {
   status: TranslateStatus;
+  jobId: string | null;
   result: TranslateResult | null;
   error: string | null;
 }

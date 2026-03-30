@@ -7,7 +7,9 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1).optional()
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1),
+  OPENAI_MODEL: z.string().default("gpt-4o-mini")
 });
 
 const parsed = EnvSchema.safeParse(process.env);
